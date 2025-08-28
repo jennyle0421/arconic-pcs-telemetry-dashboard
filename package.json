@@ -7,7 +7,9 @@
   "scripts": {
     "dev": "concurrently -n backend,frontend -c blue,green \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
     "dev:api": "npm --prefix backend run dev",
-    "dev:web": "npm --prefix frontend run dev"
+    "dev:web": "npm --prefix frontend run dev",
+    "dev:st": "PCS_API_BASE=http://localhost:4000 python3 -m streamlit run streamlit/streamlit_app.py --server.port 8501 --server.headless true",
+    "dev:all": "concurrently -n backend,frontend,streamlit -c blue,green,magenta \"npm:dev:api\" \"npm:dev:web\" \"npm run dev:st\""
   },
   "repository": {
     "type": "git",
