@@ -162,4 +162,4 @@ This project is designed to **mirror real PCS workflows** at Arconic:
 
 ## 🏭 About Arconic Relevance
 Arconic’s Davenport Works houses the **world’s largest aluminum rolling mill**.  
-This project directly simulates **the telemetry, dashboards, and workflows PCS engineers manage daily**, making it highly relevant to the **PCS Software Engineer** role.
+This project directly simulates **the telemetry, dashboards, and workflows PCS engineers manage daily**.
