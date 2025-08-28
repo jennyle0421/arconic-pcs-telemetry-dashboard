@@ -9,6 +9,11 @@
 
 ---
 
+## 🌐 Live Demo
+Try the app here: [**Jenny’s Arconic PCS Telemetry Dashboard**](https://jennys-arconic-pcs-telemetry-dashboard.streamlit.app/)
+
+___
+
 ## 📌 Overview
 
 This project models a **Process Control Systems (PCS)** environment similar to **Arconic Davenport Works**, home of the **world’s largest aluminum rolling mill**.  
