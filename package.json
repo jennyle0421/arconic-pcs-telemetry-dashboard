@@ -1,0 +1,26 @@
+{
+  "name": "arconic-pcs-telemetry-dashboard",
+  "version": "1.0.0",
+  "description": "**PCS-inspired simulation of Arconic’s rolling mill operations** — a full-stack project showcasing **real-time telemetry monitoring**, **anomaly detection**, **defect logging**, and **shift-based reporting**.",
+  "main": "index.js",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
+    "dev:api": "npm --prefix backend run dev",
+    "dev:web": "npm --prefix frontend run dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jennyle0421/arconic-pcs-telemetry-dashboard.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jennyle0421/arconic-pcs-telemetry-dashboard/issues"
+  },
+  "homepage": "https://github.com/jennyle0421/arconic-pcs-telemetry-dashboard#readme",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

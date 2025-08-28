@@ -87,6 +87,12 @@ This project **demonstrates domain knowledge** in PCS workflows while remaining 
 
 ---
 
+## System Overview
+
+![Arconic PCS — High-Level System Architecture](assets/ArconicPCS.png)
+
+---
+
 ## 📂 Project Structure
 
 ```
