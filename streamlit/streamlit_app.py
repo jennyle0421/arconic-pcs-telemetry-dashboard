@@ -1,32 +1,34 @@
 # streamlit_app.py
-# Streamlit UI for the Arconic PCS demo (rolling mill)
-# - Calls your Node/Express backend for data
-# - Shows welcome modal on first load
-# - KPIs, trends, alerts, defects, and shift report
+# Streamlit UI for the Arconic PCS rolling-mill demo
+# - Calls your Node/Express backend (default http://localhost:4000)
+# - Version-safe welcome card (no st.modal / st.dialog)
+# - KPIs, trends, insights, defects, shift report
 
 import os
 from pathlib import Path
-from datetime import datetime
 import requests
 import pandas as pd
 import altair as alt
 import streamlit as st
-from streamlit_autorefresh import st_autorefresh
 
-# -------- Optional: load .env next to this file (PCS_API_BASE etc.) --------
+# ---- optional auto-refresh (safe fallback if package missing) ----
 try:
-    from dotenv import load_dotenv  # pip install python-dotenv
+    from streamlit_autorefresh import st_autorefresh
+except Exception:
+    def st_autorefresh(*args, **kwargs):
+        return None
+
+# ---- optional .env loader (safe if missing) ----
+try:
+    from dotenv import load_dotenv
     load_dotenv(Path(__file__).with_name(".env"))
 except Exception:
     pass
 
 # ------------------------ App configuration ------------------------
-st.set_page_config(
-    page_title="Arconic PCS Telemetry — Streamlit",
-    layout="wide",
-)
+st.set_page_config(page_title="Arconic PCS Telemetry — Streamlit", layout="wide")
 
-# Thresholds (same semantics as your React app)
+# Thresholds (same idea as your React app)
 LIMITS = {
     "temperature": {"warn": 700, "crit": 750},        # °F
     "vibration":   {"warn": 1.8, "crit": 2.5},        # mm/s
@@ -45,23 +47,28 @@ if "show_welcome" not in st.session_state:
 def close_welcome():
     st.session_state["show_welcome"] = False
 
-if st.session_state["show_welcome"]:
-    with st.modal("Welcome to the Rolling Mill PCS Demo"):
+def welcome_card():
+    with st.container():
+        st.markdown("### Welcome to the Rolling Mill PCS Demo")
         st.write(
             "This app shows **simulated PCS telemetry** (temperature, vibration, throughput) "
-            "from a rolling mill. Data flows OT → **DMZ Ingest API** → **SQLite (IT)**. "
+            "from a rolling mill. Data flows **OT → Edge → DMZ Ingest API → SQLite (IT)**. "
             "This UI **queries an internal API** to display real-time and historical data."
         )
         st.write("**How to read the page**")
         st.markdown(
             "- **KPIs**: current values with health badges\n"
             "- **Trends**: last N readings with thresholds\n"
-            "- **Alerts**: plain-English insights that matter now\n"
+            "- **Insights**: plain-English alerts that matter now\n"
             "- **Defects**: log & flag batches\n"
             "- **Shift report**: aggregated metrics by shift"
         )
         st.caption("All data is simulated. No proprietary Arconic data is used.")
         st.button("Start monitoring", on_click=close_welcome)
+        st.markdown("---")
+
+if st.session_state["show_welcome"]:
+    welcome_card()
 
 # ------------------------ Sidebar controls ------------------------
 st.sidebar.title("Controls")
@@ -81,7 +88,6 @@ st.sidebar.json(LIMITS)
 
 # ------------------------ API helpers ------------------------
 def fetch_json(path, params=None, method="GET", json=None, timeout=6):
-    """Generic HTTP JSON helper with error handling."""
     url = f"{BASE_URL}{path}"
     try:
         r = requests.request(method, url, params=params, json=json, timeout=timeout)
@@ -91,10 +97,8 @@ def fetch_json(path, params=None, method="GET", json=None, timeout=6):
         st.error(f"API error for {path}: {e}")
         return None
 
-def api_health():
-    # try /api/history as a simple health check
-    data = fetch_json("/api/history", params={"limit": 1})
-    return data is not None
+def api_health_ok():
+    return fetch_json("/api/history", params={"limit": 1}) is not None
 
 def get_history(limit_points=150):
     data = fetch_json("/api/history", params={"limit": limit_points})
@@ -151,16 +155,15 @@ def badge_style(state):
     }
     return styles.get(state, styles["unknown"])
 
-# ------------------------ Header ------------------------
+# ------------------------ Header & status ------------------------
 st.title("Arconic PCS Telemetry Dashboard — Streamlit")
 st.caption("Real-time monitoring & defect analytics for Rolling Mill RM-01 (simulated).")
 
-# Connection status chips (API only; WS not used in Streamlit)
-status_api = "ok" if api_health() else "down"
+api_ok = api_health_ok()
 st.markdown(
     f"**API:** "
-    f"<span style='padding:2px 8px; border-radius:999px; background:#{'DCFCE7' if status_api=='ok' else 'FEE2E2'}'>"
-    f"{status_api}</span> &nbsp;&nbsp; "
+    f"<span style='padding:2px 8px; border-radius:999px; background:#{'DCFCE7' if api_ok else 'FEE2E2'}'>"
+    f"{'ok' if api_ok else 'down'}</span> &nbsp;&nbsp; "
     f"**Base URL:** `{BASE_URL}`",
     unsafe_allow_html=True,
 )
@@ -191,11 +194,11 @@ show_kpi(c4, "Surface Defects (%)", "defects")
 # ------------------------ Charts ------------------------
 def line_with_limits(df, y, warn=None, crit=None, warn_low=None, crit_low=None):
     if df.empty:
-        return alt.Chart(pd.DataFrame({"x": [], "y": []})).mark_line()
+        return alt.Chart(pd.DataFrame({"ts": [], y: []})).mark_line()
     base = alt.Chart(df).encode(x=alt.X("ts:T", title="Time"))
     line = base.mark_line().encode(y=alt.Y(f"{y}:Q", title=y.title()))
     layers = [line]
-    # Threshold rules
+    # Threshold guide lines
     if warn is not None:
         layers.append(base.mark_rule(strokeDash=[6, 6]).encode(y=alt.datum(warn), color=alt.value("#9ca3af")))
     if crit is not None:
@@ -210,64 +213,51 @@ st.markdown("### Trends")
 lc1, lc2 = st.columns(2)
 with lc1:
     st.altair_chart(
-        line_with_limits(
-            hist, "temperature",
-            warn=LIMITS["temperature"]["warn"], crit=LIMITS["temperature"]["crit"]
-        ),
+        line_with_limits(hist, "temperature",
+                         warn=LIMITS["temperature"]["warn"], crit=LIMITS["temperature"]["crit"]),
         use_container_width=True,
     )
 with lc2:
     st.altair_chart(
-        line_with_limits(
-            hist, "vibration",
-            warn=LIMITS["vibration"]["warn"], crit=LIMITS["vibration"]["crit"]
-        ),
+        line_with_limits(hist, "vibration",
+                         warn=LIMITS["vibration"]["warn"], crit=LIMITS["vibration"]["crit"]),
         use_container_width=True,
     )
-
 lc3, lc4 = st.columns(2)
 with lc3:
     st.altair_chart(
-        line_with_limits(
-            hist, "throughput",
-            warn_low=LIMITS["throughput"]["warnLow"], crit_low=LIMITS["throughput"]["critLow"]
-        ),
+        line_with_limits(hist, "throughput",
+                         warn_low=LIMITS["throughput"]["warnLow"], crit_low=LIMITS["throughput"]["critLow"]),
         use_container_width=True,
     )
 with lc4:
     st.altair_chart(
-        line_with_limits(
-            hist, "defects",
-            warn=LIMITS["defects"]["warn"], crit=LIMITS["defects"]["crit"]
-        ),
+        line_with_limits(hist, "defects",
+                         warn=LIMITS["defects"]["warn"], crit=LIMITS["defects"]["crit"]),
         use_container_width=True,
     )
 
-# ------------------------ Alerts (plain-English insights) ------------------------
+# ------------------------ Insights ------------------------
 st.markdown("### Insights — What matters now")
 if last is None:
-    st.info("Waiting for data…")
+    st.info("Waiting for data… (start your backend on :4000 or set the Base URL in the sidebar).")
 else:
     notes = []
-    def note(cond, title, detail):
-        if cond:
-            notes.append((title, detail))
+    def note(cond, title, detail): 
+        if cond: notes.append((title, detail))
 
     note(last["temperature"] >= LIMITS["temperature"]["crit"],
          "Temperature CRITICAL", f"Now {last['temperature']:.2f} °F (≥ {LIMITS['temperature']['crit']})")
     note(last["temperature"] >= LIMITS["temperature"]["warn"],
          "Temperature high", f"Now {last['temperature']:.2f} °F (≥ {LIMITS['temperature']['warn']})")
-
     note(last["vibration"] >= LIMITS["vibration"]["crit"],
          "Vibration CRITICAL", f"Now {last['vibration']:.2f} mm/s (≥ {LIMITS['vibration']['crit']})")
     note(last["vibration"] >= LIMITS["vibration"]["warn"],
          "Vibration elevated", f"Now {last['vibration']:.2f} mm/s (≥ {LIMITS['vibration']['warn']})")
-
     note(last["throughput"] <= LIMITS["throughput"]["critLow"],
          "Throughput CRITICAL (low)", f"Now {last['throughput']:.0f} (≤ {LIMITS['throughput']['critLow']})")
     note(last["throughput"] <= LIMITS["throughput"]["warnLow"],
          "Throughput low", f"Now {last['throughput']:.0f} (≤ {LIMITS['throughput']['warnLow']})")
-
     note(last["defects"] >= LIMITS["defects"]["crit"],
          "Defects CRITICAL", f"Now {last['defects']:.2f}% (≥ {LIMITS['defects']['crit']})")
     note(last["defects"] >= LIMITS["defects"]["warn"],
