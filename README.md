@@ -50,14 +50,7 @@ This project **demonstrates domain knowledge** in PCS workflows while remaining 
   - Operator uptime
   - Throughput per shift
   - Scrap rates
-- Generates **PDF/Excel reports** using automated scripts.
-
-### **Architecture Diagram**
-Includes a **high-level Visio diagram** showing how telemetry flows through:
-- C-based PLC simulators → Backend ingestion → SQL Server → React dashboard → Automated reporting
-
-![PCS Architecture Diagram](./assets/pcs-diagram.png)
-
+- Generates **PDF/Excel reports** using automated scripts.s
 ---
 
 ## 🛠️ Tech Stack
